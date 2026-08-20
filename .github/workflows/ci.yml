@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: equitylens_test
+          POSTGRES_USER: equitylens
+          POSTGRES_PASSWORD: equitylens
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U equitylens -d equitylens_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7.4-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      APP_ENV: test
+      DATABASE_URL: postgresql+asyncpg://equitylens:equitylens@localhost:5432/equitylens_test
+      REDIS_URL: redis://localhost:6379/0
+      DATA_MODE: demo
+      DEMO_TASKS_EAGER: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.30.3 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pnpm install --frozen-lockfile
+      - run: python -m pip install -e "./apps/api[dev]"
+      - run: python scripts/release.py
+      - run: python -m app.cli seed
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm --filter @equity-lens/web exec playwright install --with-deps chromium
+      - run: pnpm api:dev & pnpm --filter @equity-lens/web dev & npx wait-on http://127.0.0.1:3000 http://127.0.0.1:8000/api/v1/health/ready && pnpm test:e2e
+
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4

@@ -1,0 +1,31 @@
+{
+  "name": "equity-lens",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.30.3",
+  "scripts": {
+    "bootstrap": "pnpm install && pnpm api:install && pnpm seed",
+    "dev": "concurrently -n web,api -c cyan,green \"pnpm --filter @equity-lens/web dev\" \"pnpm api:dev\"",
+    "api:install": "python -m pip install -e ./apps/api[dev]",
+    "api:dev": "python -m uvicorn app.main:app --reload --app-dir apps/api --port 8000",
+    "format": "pnpm --filter @equity-lens/web format && python -m ruff format apps/api/app apps/api/tests",
+    "format:check": "pnpm --filter @equity-lens/web format:check && python -m ruff format --check apps/api/app apps/api/tests",
+    "lint": "pnpm --filter @equity-lens/web lint && python -m ruff check apps/api/app apps/api/tests",
+    "typecheck": "pnpm --filter @equity-lens/web typecheck && python -m pyright apps/api/app",
+    "test:unit": "python -m pytest apps/api/tests/unit && pnpm --filter @equity-lens/web test:unit",
+    "test:integration": "python -m pytest apps/api/tests/integration && pnpm --filter @equity-lens/web test:integration",
+    "test:e2e": "pnpm --filter @equity-lens/web test:e2e",
+    "test": "python -m pytest apps/api/tests && pnpm --filter @equity-lens/web test",
+    "build": "pnpm --filter @equity-lens/web build && python -m compileall -q apps/api/app",
+    "seed": "python -m app.cli seed",
+    "smoke": "python scripts/smoke.py",
+    "email-preview": "python -m app.cli email-preview",
+    "lighthouse": "pnpm --filter @equity-lens/web lighthouse",
+    "deploy-check": "python scripts/deploy_check.py && pnpm build",
+    "post-deploy-smoke": "python scripts/post_deploy_smoke.py",
+    "evidence": "python -m app.cli evidence"
+  },
+  "devDependencies": {
+    "concurrently": "latest"
+  }
+}

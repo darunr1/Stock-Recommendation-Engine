@@ -1,0 +1,8 @@
+{
+  "include": ["apps/api/app"],
+  "exclude": ["apps/api/migrations", "apps/api/tests"],
+  "extraPaths": ["apps/api"],
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": false
+}

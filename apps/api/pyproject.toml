@@ -1,0 +1,65 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "equity-lens-api"
+version = "0.1.0"
+description = "Explainable equity research API"
+requires-python = ">=3.12"
+dependencies = [
+  "aiosqlite>=0.21",
+  "alembic>=1.16",
+  "argon2-cffi>=25.1",
+  "asyncpg>=0.30",
+  "celery[redis]>=5.5",
+  "fastapi>=0.116",
+  "httpx>=0.28",
+  "numpy>=2.2",
+  "orjson>=3.10",
+  "pandas>=2.3",
+  "pydantic-settings>=2.10",
+  "pyjwt>=2.10",
+  "python-multipart>=0.0.20",
+  "redis>=6.2",
+  "sentry-sdk[fastapi]>=2.35",
+  "sqlalchemy[asyncio]>=2.0",
+  "uvicorn[standard]>=0.35"
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.17",
+  "pyright>=1.1.403",
+  "pytest>=8.4",
+  "pytest-asyncio>=1.1",
+  "pytest-cov>=6.2",
+  "ruff>=0.12"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-q --disable-warnings"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC"]
+ignore = ["B008"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"
+exclude = ["migrations"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+warn_unused_ignores = true
+disallow_untyped_defs = true

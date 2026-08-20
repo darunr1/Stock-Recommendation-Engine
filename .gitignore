@@ -1,0 +1,34 @@
+# JavaScript
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.egg-info/
+apps/api/pytest-cache-files-*/
+
+# Local runtime data
+.env
+*.db
+*.sqlite3
+*.log
+var/
+captured-emails/
+captured-emails-test/
+
+# Editors and OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

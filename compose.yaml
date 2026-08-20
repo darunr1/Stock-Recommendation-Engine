@@ -1,0 +1,95 @@
+name: equitylens
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: equitylens
+      POSTGRES_USER: equitylens
+      POSTGRES_PASSWORD: equitylens
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U equitylens -d equitylens"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning", "--maxmemory-policy", "noeviction"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - redis-data:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://equitylens:equitylens@postgres:5432/equitylens
+      REDIS_URL: redis://redis:6379/0
+      REQUIRE_REDIS: "true"
+      APP_BASE_URL: http://localhost:3000
+      API_BASE_URL: http://localhost:8000
+    command: ["sh", "-c", "python scripts/release.py && python -m app.cli seed && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/v1/health/ready', timeout=3).raise_for_status()"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./captured-emails:/app/captured-emails
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://equitylens:equitylens@postgres:5432/equitylens
+      REDIS_URL: redis://redis:6379/0
+    command: ["celery", "-A", "app.tasks.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=2"]
+    depends_on:
+      api: { condition: service_healthy }
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://equitylens:equitylens@postgres:5432/equitylens
+      REDIS_URL: redis://redis:6379/0
+    command: ["celery", "-A", "app.tasks.celery_app:celery_app", "beat", "--loglevel=INFO", "--pidfile="]
+    depends_on:
+      api: { condition: service_healthy }
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        API_UPSTREAM_URL: http://api:8000
+        NEXT_PUBLIC_APP_BASE_URL: http://localhost:3000
+    environment:
+      API_UPSTREAM_URL: http://api:8000
+      NEXT_PUBLIC_APP_BASE_URL: http://localhost:3000
+    depends_on:
+      api: { condition: service_healthy }
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres-data:
+  redis-data:
