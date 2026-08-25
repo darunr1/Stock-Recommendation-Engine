@@ -3,7 +3,6 @@ import type { NextConfig } from "next";
 const upstream = process.env.API_UPSTREAM_URL ?? "http://127.0.0.1:8000";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
   poweredByHeader: false,
   async rewrites() {
     return [
