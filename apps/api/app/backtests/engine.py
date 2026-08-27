@@ -40,14 +40,13 @@ def backtest_metrics(
     years = max((strategy_index[-1] - strategy_index[0]).days / 365.25, 1 / 365.25)
     cagr = (strategy.iloc[-1] / strategy.iloc[0]) ** (1 / years) - 1
     volatility = returns.std(ddof=1) * math.sqrt(252)
-    returns_std = float(returns.std(ddof=1))
-    sharpe = float(returns.mean()) / returns_std * math.sqrt(252) if returns_std else math.nan
+    returns_mean = cast(float, returns.mean())
+    returns_std = cast(float, returns.std(ddof=1))
+    sharpe = returns_mean / returns_std * math.sqrt(252) if returns_std else math.nan
     downside = returns[returns < 0]
     if len(downside) > 1:
-        downside_std = float(downside.std(ddof=1))
-        sortino = (
-            float(returns.mean()) / downside_std * math.sqrt(252) if downside_std else math.nan
-        )
+        downside_std = cast(float, downside.std(ddof=1))
+        sortino = returns_mean / downside_std * math.sqrt(252) if downside_std else math.nan
     else:
         sortino = math.nan
     drawdown = strategy / strategy.cummax() - 1
