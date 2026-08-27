@@ -4,7 +4,7 @@ import json
 import math
 from dataclasses import dataclass
 from datetime import date
-from typing import Any, TypedDict
+from typing import Any, TypedDict, cast
 
 import numpy as np
 import pandas as pd
@@ -235,7 +235,7 @@ def winsorized_percentiles(
         return result
     low, high = available.quantile([0.05, 0.95])
     clipped = available.clip(float(low), float(high))
-    ranked = clipped.rank(method="average", pct=True) * 100
+    ranked = cast(pd.Series, clipped.rank(method="average", pct=True) * 100)
     if reverse:
         ranked = 100 - ranked + (100 / len(ranked))
     for key, value in ranked.items():
