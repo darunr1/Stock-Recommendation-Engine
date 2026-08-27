@@ -51,7 +51,7 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: pnpm --filter @equity-lens/web exec playwright install --with-deps chromium
-      - run: pnpm api:dev & pnpm --filter @equity-lens/web dev & npx wait-on --timeout 120000 http-get://127.0.0.1:3000 http-get://127.0.0.1:8000/api/v1/health/ready && pnpm test:e2e
+      - run: pnpm api:dev & pnpm --filter @equity-lens/web dev & npx wait-on --timeout 120000 http-get://localhost:3000 http-get://127.0.0.1:8000/api/v1/health/ready && PLAYWRIGHT_BASE_URL=http://localhost:3000 pnpm test:e2e
 
   dependency-review:
     if: github.event_name == 'pull_request'
