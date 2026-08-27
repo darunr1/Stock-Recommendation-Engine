@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -36,18 +36,19 @@ def backtest_metrics(
         }
     returns = strategy.pct_change().dropna()
     total_return = strategy.iloc[-1] / initial_capital - 1
-    years = max((strategy.index[-1] - strategy.index[0]).days / 365.25, 1 / 365.25)
+    strategy_index = pd.DatetimeIndex(strategy.index)
+    years = max((strategy_index[-1] - strategy_index[0]).days / 365.25, 1 / 365.25)
     cagr = (strategy.iloc[-1] / strategy.iloc[0]) ** (1 / years) - 1
     volatility = returns.std(ddof=1) * math.sqrt(252)
-    sharpe = (
-        returns.mean() / returns.std(ddof=1) * math.sqrt(252) if returns.std(ddof=1) else math.nan
-    )
+    returns_mean = cast(float, returns.mean())
+    returns_std = cast(float, returns.std(ddof=1))
+    sharpe = returns_mean / returns_std * math.sqrt(252) if returns_std else math.nan
     downside = returns[returns < 0]
-    sortino = (
-        returns.mean() / downside.std(ddof=1) * math.sqrt(252)
-        if len(downside) > 1 and downside.std(ddof=1)
-        else math.nan
-    )
+    if len(downside) > 1:
+        downside_std = cast(float, downside.std(ddof=1))
+        sortino = returns_mean / downside_std * math.sqrt(252) if downside_std else math.nan
+    else:
+        sortino = math.nan
     drawdown = strategy / strategy.cummax() - 1
     max_dd = float(drawdown.min())
     calmar = cagr / abs(max_dd) if max_dd else math.nan
@@ -157,8 +158,8 @@ def run_walk_forward(prices: dict[str, pd.DataFrame], config: dict[str, Any]) ->
         )
     series_frame = pd.DataFrame(points)
     series_frame.index = pd.to_datetime(series_frame["date"])
-    strategy_series = series_frame["strategy_value"]
-    benchmark_series = series_frame["benchmark_value"]
+    strategy_series = cast(pd.Series, series_frame["strategy_value"])
+    benchmark_series = cast(pd.Series, series_frame["benchmark_value"])
     drawdown = strategy_series / strategy_series.cummax() - 1
     for point, draw in zip(points, drawdown, strict=True):
         point["drawdown"] = round(float(draw), 6)

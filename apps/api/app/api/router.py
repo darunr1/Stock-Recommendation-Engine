@@ -4,7 +4,7 @@ import html
 import re
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, cast
 
 import pandas as pd
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
@@ -54,7 +54,7 @@ from app.db.session import SessionLocal, get_db
 from app.portfolios.service import execute_trade, portfolio_snapshot, reset_portfolio
 from app.providers.demo import DEMO_AS_OF, DemoFundamentalsProvider
 from app.providers.interfaces import PriceBar
-from app.recommendations.engine import market_regime
+from app.recommendations.engine import Contributor, market_regime
 from app.services.analytics import DatabaseAnalytics
 from app.services.demo_seed import seed_demo
 from app.services.email import email_provider
@@ -261,6 +261,8 @@ async def market_summary(
     for _, rec in rows:
         band_counts[rec.band] = band_counts.get(rec.band, 0) + 1
     spy = await session.scalar(select(Stock).where(Stock.symbol == "SPY"))
+    if spy is None:
+        raise HTTPException(status_code=503, detail="Benchmark history is unavailable")
     spy_rows = (
         await session.scalars(
             select(DailyPrice)
@@ -373,6 +375,7 @@ async def recommendation_detail(
     price = await latest_close(session, stock.id)
     await record_stock_view(session, user, stock.symbol)
     await session.commit()
+    contributors = cast(list[Contributor], rec.contributors)
     result = serialize_recommendation(stock, rec)
     result.update(
         {
@@ -388,7 +391,7 @@ async def recommendation_detail(
             "what_could_change": [
                 f"A material change in {item['label'].lower()} could move the score."
                 for item in sorted(
-                    rec.contributors,
+                    contributors,
                     key=lambda value: abs(float(value["contribution"])),
                     reverse=True,
                 )[:3]
